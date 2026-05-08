@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:uni_sphere/views/login_view.dart';
+import 'package:uni_sphere/views/dashboard_view.dart';
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -8,214 +10,172 @@ class SignupView extends StatefulWidget {
 }
 
 class _SignupViewState extends State<SignupView> {
-  final _formKey = GlobalKey<FormState>();
-  
-  // Controllers matching your project structure
-  final _fnameCtrl = TextEditingController();
-  final _lnameCtrl = TextEditingController();
-  final _usernameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  
-  String? _gender;
-  bool _obscure = true;
+  // Matching the uniBlue primary color from login
+  static const Color uniBlue = Color(0xFF6259E8);
 
-  // Gender options from your original implementation
-  static const _genders = ['Male', 'Female', 'Other'];
-
-  @override
-  void dispose() {
-    _fnameCtrl.dispose();
-    _lnameCtrl.dispose();
-    _usernameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    super.dispose();
-  }
-
-  void _signup() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Show success feedback matching your original logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created. Please login.'),
-          backgroundColor: Color(0xFF0052D4),
-        ),
-      );
-      Navigator.pop(context);
-    }
+  // Reusable helper for matching styled input fields
+  Widget _buildTextField({
+    required IconData icon,
+    required String hintText,
+    bool isPassword = false,
+  }) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12, width: 1.5),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.black38, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: TextField(
+              obscureText: isPassword,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: const TextStyle(color: Colors.black38),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Defining the custom blue color locally for consistency
-    const primaryBlue = Color(0xFF0052D4);
-
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Create Student Account'),
-        foregroundColor: Colors.white,
-        backgroundColor: primaryBlue,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: uniBlue),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Join UniSphere',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: primaryBlue,
-                  ),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 10),
+
+              // 1. Centered Header Text
+              const Text(
+                'Create Account',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E1E1E),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Enter your details to register for campus events.',
-                  style: TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sign up to get started',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black45,
                 ),
-                const SizedBox(height: 24),
-                
-                // First Name Field
-                TextFormField(
-                  controller: _fnameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'First Name',
-                    prefixIcon: Icon(Icons.person_outline, color: primaryBlue),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter first name'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                
-                // Last Name Field
-                TextFormField(
-                  controller: _lnameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Last Name',
-                    prefixIcon: Icon(Icons.person_outline, color: primaryBlue),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter last name'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                
-                // Gender Dropdown
-                DropdownButtonFormField<String>(
-                  value: _gender,
-                  decoration: const InputDecoration(
-                    labelText: 'Gender',
-                    prefixIcon: Icon(Icons.wc_rounded, color: primaryBlue),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _genders
-                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _gender = v),
-                  validator: (v) => v == null ? 'Please select gender' : null,
-                ),
-                const SizedBox(height: 16),
-                
-                // Username Field
-                TextFormField(
-                  controller: _usernameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: Icon(Icons.account_circle, color: primaryBlue),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Please enter username'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                
-                // Email Field with Regex Validation
-                TextFormField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined, color: primaryBlue),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Please enter email';
-                    }
-                    final ok = RegExp(
-                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                    ).hasMatch(v.trim());
-                    return ok ? null : 'Please enter a valid email';
+              ),
+              const SizedBox(height: 40),
+
+              // 2. Input Fields matching Figma Form
+              _buildTextField(
+                icon: Icons.person_outline,
+                hintText: 'Full Name',
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                icon: Icons.email_outlined,
+                hintText: 'Email',
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                icon: Icons.lock_outlined,
+                hintText: 'Password',
+                isPassword: true,
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                icon: Icons.lock_outlined,
+                hintText: 'Confirm Password',
+                isPassword: true,
+              ),
+              const SizedBox(height: 40),
+
+              // 3. Full-Width Sign Up Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DashboardView()),
+                    );
                   },
-                ),
-                const SizedBox(height: 16),
-                
-                // Password Field with Visibility Toggle
-                TextFormField(
-                  controller: _passwordCtrl,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline, color: primaryBlue),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility : Icons.visibility_off,
-                        color: primaryBlue,
-                      ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter password';
-                    if (v.length < 6) return 'Password must be 6+ characters';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-                
-                // Submit Button
-                FilledButton(
-                  onPressed: _signup,
                   style: FilledButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: uniBlue,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: const Text(
-                    'Create Account',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    'Sign Up',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                
-                // Back to Login Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Already have an account?"),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'Login',
-                        style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 32),
+
+              // 4. Navigation back to Login
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Already have an account? ",
+                    style: TextStyle(color: Colors.black54, fontSize: 15),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginView()),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: uniBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
         ),
       ),
