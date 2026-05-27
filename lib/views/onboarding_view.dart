@@ -65,7 +65,7 @@ class _OnboardingViewState extends State<OnboardingView> {
       width: _index == i ? 12 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: _index == i ? uniBlue : uniBlue.withOpacity(0.2),
+        color: _index == i ? uniBlue : uniBlue.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -104,7 +104,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                         Container(
                           padding: const EdgeInsets.all(40),
                           decoration: BoxDecoration(
-                            color: uniBlue.withOpacity(0.1),
+                            color: uniBlue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(_pages[i].icon, size: 100, color: uniBlue),

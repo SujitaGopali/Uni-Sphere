@@ -1,3 +1,8 @@
+plugins {
+    id("com.android.application") version "8.7.2" apply false
+    alias(libs.plugins.kotlin.android) apply false
+}
+
 allprojects {
     repositories {
         google()

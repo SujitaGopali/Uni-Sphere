@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:uni_sphere/screens/dashboard_screen.dart';
 import 'package:uni_sphere/views/signup_view.dart';
-import 'package:uni_sphere/views/dashboard_view.dart';
+
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -63,7 +64,7 @@ class _LoginViewState extends State<LoginView> {
               width: 130,
               height: 130,
               decoration: BoxDecoration(
-                color: uniBlue.withOpacity(0.08),
+                color: uniBlue.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
             ),
@@ -81,7 +82,7 @@ class _LoginViewState extends State<LoginView> {
                   border: Border.all(color: uniBlue, width: 3),
                   boxShadow: [
                     BoxShadow(
-                      color: uniBlue.withOpacity(0.15),
+                      color: uniBlue.withValues(alpha: 0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -95,20 +96,20 @@ class _LoginViewState extends State<LoginView> {
                       width: 18,
                       height: 3,
                       decoration: BoxDecoration(
-                        color: uniBlue.withOpacity(0.5),
+                        color: uniBlue.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                     const Spacer(),
                     // Blue lock icon inside the phone screen
-                    Icon(Icons.lock_rounded, size: 26, color: uniBlue.withOpacity(0.85)),
+                    Icon(Icons.lock_rounded, size: 26, color: uniBlue.withValues(alpha: 0.85)),
                     const Spacer(),
                     // Home button line
                     Container(
                       width: 25,
                       height: 3,
                       decoration: BoxDecoration(
-                        color: uniBlue.withOpacity(0.3),
+                        color: uniBlue.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       margin: const EdgeInsets.only(bottom: 8),
@@ -140,7 +141,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     child: CircleAvatar(
                       radius: 28,
-                      backgroundColor: uniBlue.withOpacity(0.15),
+                      backgroundColor: uniBlue.withValues(alpha: 0.15),
                       child: const Icon(Icons.person_rounded, size: 36, color: uniBlue),
                     ),
                   ),
@@ -169,7 +170,7 @@ class _LoginViewState extends State<LoginView> {
                 angle: -0.5,
                 child: Icon(
                   Icons.vpn_key_rounded,
-                  color: uniBlue.withOpacity(0.6),
+                  color: uniBlue.withValues(alpha: 0.6),
                   size: 22,
                 ),
               ),

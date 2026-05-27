@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:uni_sphere/screens/dashboard_screen.dart';
 import 'package:uni_sphere/views/login_view.dart';
-import 'package:uni_sphere/views/dashboard_view.dart';
+
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
