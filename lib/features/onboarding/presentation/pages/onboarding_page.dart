@@ -160,7 +160,7 @@ class OnboardingScreen extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const OnboardingScreen({
+  const OnboardingScreen({super.key, 
     required this.title,
     required this.description,
     required this.icon,

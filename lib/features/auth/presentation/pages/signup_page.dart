@@ -85,7 +85,11 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   Widget build(BuildContext context) {
     ref.listen(authViewModelProvider, (previous, next) {
       if (next.isSuccess && next.user != null) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created! Please log in.')),
+        );
+        ref.read(authViewModelProvider.notifier).resetState();
+        Navigator.pop(context);
       }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
