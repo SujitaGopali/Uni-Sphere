@@ -19,3 +19,4 @@ class AuthEntity extends Equatable {
   List<Object?> get props => [name, email, password, phone, address];
 }
 //.
+//.
