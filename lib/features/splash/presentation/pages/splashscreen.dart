@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
-import 'package:uni_sphere/features/onboarding/presentation/pages/onboarding_page.dart';
 
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+class SplashView extends StatefulWidget {
+  const SplashView({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  State<SplashView> createState() => _SplashViewState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashViewState extends State<SplashView> {
   @override
   void initState() {
     super.initState();
-    _navigateToOnboarding();
-  }
-
-  void _navigateToOnboarding() {
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/onboarding');
       }

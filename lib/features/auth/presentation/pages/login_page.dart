@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:uni_sphere/features/auth/presentation/pages/signup_page.dart';
-import 'package:uni_sphere/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uni_sphere/features/auth/presentation/view_model/auth_view_model.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  // The primary purple-blue color from your Figma design
+class _LoginPageState extends ConsumerState<LoginPage> {
   static const Color uniBlue = Color(0xFF6259E8);
 
-  // Helper widget to construct the boxed text fields with icons
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Widget _buildTextField({
     required IconData icon,
     required String hintText,
+    required TextEditingController controller,
     bool isPassword = false,
   }) {
     return Container(
@@ -33,6 +42,7 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(width: 16),
           Expanded(
             child: TextField(
+              controller: controller,
               obscureText: isPassword,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
               decoration: InputDecoration(
@@ -49,7 +59,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Pure Flutter illustration to replace the missing image asset
   Widget _buildFigmaIllustration() {
     return Center(
       child: SizedBox(
@@ -58,7 +67,6 @@ class _LoginPageState extends State<LoginPage> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Background decorative soft purple circle
             Container(
               width: 130,
               height: 130,
@@ -67,8 +75,6 @@ class _LoginPageState extends State<LoginPage> {
                 shape: BoxShape.circle,
               ),
             ),
-
-            // The Mobile Phone Frame
             Positioned(
               right: 35,
               bottom: 10,
@@ -90,7 +96,6 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    // Top speaker line
                     Container(
                       width: 18,
                       height: 3,
@@ -100,14 +105,12 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const Spacer(),
-                    // Blue lock icon inside the phone screen
                     Icon(
                       Icons.lock_rounded,
                       size: 26,
                       color: uniBlue.withValues(alpha: 0.85),
                     ),
                     const Spacer(),
-                    // Home button line
                     Container(
                       width: 25,
                       height: 3,
@@ -121,8 +124,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-
-            // Character Standing on Left (Built with Avatars and Containers)
             Positioned(
               left: 25,
               bottom: 15,
@@ -152,7 +153,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  // Small shield indicator representing secure login
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
@@ -168,8 +168,6 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
             ),
-
-            // Floating decorative key near the phone
             Positioned(
               top: 25,
               right: 25,
@@ -188,8 +186,29 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _handleLogin() {
+    ref.read(authViewModelProvider.notifier).login(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(authViewModelProvider, (previous, next) {
+      if (next.isSuccess && next.user != null) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+      if (next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!)),
+        );
+        ref.read(authViewModelProvider.notifier).resetState();
+      }
+    });
+
+    final isLoading = ref.watch(authViewModelProvider).isLoading;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -199,8 +218,6 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-
-              // 1. Centered Header Text
               const Text(
                 'Welcome Back!',
                 textAlign: TextAlign.center,
@@ -217,23 +234,20 @@ class _LoginPageState extends State<LoginPage> {
                 style: TextStyle(fontSize: 16, color: Colors.black45),
               ),
               const SizedBox(height: 24),
-
-              // 2. Pure Code Figma Illustration
               _buildFigmaIllustration(),
               const SizedBox(height: 32),
-
-              // 3. Email Input Box
-              _buildTextField(icon: Icons.email_outlined, hintText: 'Email'),
+              _buildTextField(
+                icon: Icons.email_outlined,
+                hintText: 'Email',
+                controller: _emailController,
+              ),
               const SizedBox(height: 16),
-
-              // 4. Password Input Box
               _buildTextField(
                 icon: Icons.lock_outlined,
                 hintText: 'Password',
+                controller: _passwordController,
                 isPassword: true,
               ),
-
-              // 5. Forgot Password Button
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -248,34 +262,37 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 6. Full-Width Login Button
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: FilledButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/dashboard');
-                  },
+                  onPressed: isLoading ? null : _handleLogin,
                   style: FilledButton.styleFrom(
                     backgroundColor: uniBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Login',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 32),
-
-              // 7. Navigation link to Signup
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

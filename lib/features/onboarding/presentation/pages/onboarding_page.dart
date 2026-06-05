@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
-import 'package:uni_sphere/features/auth/presentation/pages/login_page.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});

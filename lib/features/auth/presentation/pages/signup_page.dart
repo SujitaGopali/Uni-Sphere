@@ -1,22 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:uni_sphere/features/auth/presentation/pages/login_page.dart';
-import 'package:uni_sphere/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uni_sphere/features/auth/domain/entities/auth_entity.dart';
+import 'package:uni_sphere/features/auth/presentation/view_model/auth_view_model.dart';
 
-class SignupPage extends StatefulWidget {
+class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  ConsumerState<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
-  // Matching the uniBlue primary color from login
+class _SignupPageState extends ConsumerState<SignupPage> {
   static const Color uniBlue = Color(0xFF6259E8);
 
-  // Reusable helper for matching styled input fields
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   Widget _buildTextField({
     required IconData icon,
     required String hintText,
+    required TextEditingController controller,
     bool isPassword = false,
   }) {
     return Container(
@@ -33,6 +47,7 @@ class _SignupPageState extends State<SignupPage> {
           const SizedBox(width: 16),
           Expanded(
             child: TextField(
+              controller: controller,
               obscureText: isPassword,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
               decoration: InputDecoration(
@@ -47,8 +62,41 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
+  void _handleSignup() {
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
+    final entity = AuthEntity(
+      name: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      phone: '',
+      address: '',
+    );
+
+    ref.read(authViewModelProvider.notifier).register(entity);
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(authViewModelProvider, (previous, next) {
+      if (next.isSuccess && next.user != null) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+      if (next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!)),
+        );
+        ref.read(authViewModelProvider.notifier).resetState();
+      }
+    });
+
+    final isLoading = ref.watch(authViewModelProvider).isLoading;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -66,8 +114,6 @@ class _SignupPageState extends State<SignupPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 10),
-
-              // 1. Centered Header Text
               const Text(
                 'Create Account',
                 textAlign: TextAlign.center,
@@ -84,58 +130,63 @@ class _SignupPageState extends State<SignupPage> {
                 style: TextStyle(fontSize: 16, color: Colors.black45),
               ),
               const SizedBox(height: 40),
-
-              // 2. Input Fields matching Figma Form
               _buildTextField(
                 icon: Icons.person_outline,
                 hintText: 'Full Name',
+                controller: _nameController,
               ),
               const SizedBox(height: 16),
-
-              _buildTextField(icon: Icons.email_outlined, hintText: 'Email'),
+              _buildTextField(
+                icon: Icons.email_outlined,
+                hintText: 'Email',
+                controller: _emailController,
+              ),
               const SizedBox(height: 16),
-
               _buildTextField(
                 icon: Icons.lock_outlined,
                 hintText: 'Password',
+                controller: _passwordController,
                 isPassword: true,
               ),
               const SizedBox(height: 16),
-
               _buildTextField(
                 icon: Icons.lock_outlined,
                 hintText: 'Confirm Password',
+                controller: _confirmPasswordController,
                 isPassword: true,
               ),
               const SizedBox(height: 40),
-
-              // 3. Full-Width Sign Up Button
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: FilledButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/dashboard');
-                  },
+                  onPressed: isLoading ? null : _handleSignup,
                   style: FilledButton.styleFrom(
                     backgroundColor: uniBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 32),
-
-              // 4. Navigation back to Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uni_sphere/features/auth/presentation/view_model/auth_view_model.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authViewModelProvider).user;
+
+    return ColoredBox(
+      color: AppTheme.background,
+      child: Column(
         children: [
-          // Purple header
           Container(
             width: double.infinity,
             color: AppTheme.primary,
             padding: const EdgeInsets.only(
-              top: 56,
+              top: 24,
               bottom: 32,
               left: 24,
               right: 24,
@@ -32,18 +35,18 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Student Name',
-                  style: TextStyle(
+                Text(
+                  user?.name ?? 'Student Name',
+                  style: const TextStyle(
                     fontFamily: AppTheme.fontBold,
                     color: Colors.white,
                     fontSize: 20,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'student@university.edu',
-                  style: TextStyle(
+                Text(
+                  user?.email ?? 'student@university.edu',
+                  style: const TextStyle(
                     fontFamily: AppTheme.fontRegular,
                     color: Colors.white70,
                     fontSize: 13,
@@ -52,8 +55,6 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          // Placeholder body
           const Expanded(
             child: Center(
               child: Text(

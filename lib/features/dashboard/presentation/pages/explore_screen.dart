@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uni_sphere/core/widgets/uni_app_bar.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
 
 class ExploreScreen extends StatelessWidget {
@@ -7,10 +6,9 @@ class ExploreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const UniAppBar(title: 'Explore'),
-      backgroundColor: AppTheme.background,
-      body: Center(
+    return ColoredBox(
+      color: AppTheme.background,
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
