@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:uni_sphere/core/services/hive/hive_service.dart';
 import 'package:uni_sphere/features/auth/data/datasources/local/auth_local_datasource.dart';
+import 'package:uni_sphere/features/auth/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:uni_sphere/features/auth/data/repositories/auth_repositories.dart';
 import 'package:uni_sphere/features/auth/domain/entities/auth_entity.dart';
 import 'package:uni_sphere/features/auth/domain/repositories/auth_reposity.dart';
@@ -13,13 +15,21 @@ final hiveServiceProvider = Provider<HiveService>((ref) {
   throw UnimplementedError('HiveService must be overridden in main.dart');
 });
 
+final httpClientProvider = Provider<http.Client>((ref) {
+  return http.Client();
+});
+
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
   return AuthLocalDataSource(hiveService: ref.watch(hiveServiceProvider));
 });
 
+final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
+  return AuthRemoteDataSource(client: ref.watch(httpClientProvider));
+});
+
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
   return AuthRepositoryImpl(
-    dataSource: ref.watch(authLocalDataSourceProvider),
+    dataSource: ref.watch(authRemoteDataSourceProvider),
   );
 });
 
