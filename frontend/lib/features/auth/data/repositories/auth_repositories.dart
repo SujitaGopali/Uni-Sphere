@@ -17,7 +17,7 @@ class AuthRepositoryImpl implements IAuthRepository {
       final result = await dataSource.register(model);
       return Right(result);
     } catch (e) {
-      return Left(LocalFailure(e.toString()));
+      return Left(LocalDatabaseFailure(e.toString()));
     }
   }
 
@@ -30,7 +30,7 @@ class AuthRepositoryImpl implements IAuthRepository {
       final model = await dataSource.login(email, password);
       return Right(model.toEntity());
     } catch (e) {
-      return Left(LocalFailure(e.toString()));
+      return Left(LocalDatabaseFailure(e.toString()));
     }
   }
 
@@ -40,7 +40,7 @@ class AuthRepositoryImpl implements IAuthRepository {
       final result = await dataSource.logout(email);
       return Right(result);
     } catch (e) {
-      return Left(LocalFailure(e.toString()));
+      return Left(LocalDatabaseFailure(e.toString()));
     }
   }
 }

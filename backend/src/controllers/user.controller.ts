@@ -43,4 +43,22 @@ export class UserController {
       next(error);
     }
   };
+
+  public me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json(ApiResponseHelper.error(401, "Authorization token required"));
+        return;
+      }
+
+      const userResponse = req.user.toObject();
+      delete (userResponse as any).password;
+
+      res
+        .status(200)
+        .json(ApiResponseHelper.success(200, "Current user fetched successfully", { user: userResponse }));
+    } catch (error) {
+      next(error);
+    }
+  };
 }

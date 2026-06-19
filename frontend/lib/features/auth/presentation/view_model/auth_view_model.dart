@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:uni_sphere/core/services/auth_token_storage.dart';
 import 'package:uni_sphere/core/services/hive/hive_service.dart';
 import 'package:uni_sphere/features/auth/data/datasources/local/auth_local_datasource.dart';
 import 'package:uni_sphere/features/auth/data/datasources/remote/auth_remote_datasource.dart';
@@ -19,12 +20,19 @@ final httpClientProvider = Provider<http.Client>((ref) {
   return http.Client();
 });
 
+final authTokenStorageProvider = Provider<AuthTokenStorage>((ref) {
+  return AuthTokenStorage();
+});
+
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
   return AuthLocalDataSource(hiveService: ref.watch(hiveServiceProvider));
 });
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthRemoteDataSource(client: ref.watch(httpClientProvider));
+  return AuthRemoteDataSource(
+    client: ref.watch(httpClientProvider),
+    tokenStorage: ref.watch(authTokenStorageProvider),
+  );
 });
 
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {

@@ -12,27 +12,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
   late PageController _pageController;
   int _currentPage = 0;
 
-  final List<OnboardingScreen> screens = [
-    OnboardingScreen(
+  final List<_OnboardingData> _screens = const [
+    _OnboardingData(
+      icon: Icons.calendar_month_rounded,
       title: 'Discover Events',
       description:
           'Find amazing campus events happening around you and never miss out on fun activities.',
-      icon: Icons.calendar_month_rounded,
-      color: AppTheme.primary,
     ),
-    OnboardingScreen(
+    _OnboardingData(
+      icon: Icons.people_alt_rounded,
       title: 'Connect with Friends',
       description:
           'Meet like-minded students and build meaningful connections through shared interests.',
-      icon: Icons.people_rounded,
-      color: AppTheme.primary,
     ),
-    OnboardingScreen(
+    _OnboardingData(
+      icon: Icons.schedule_rounded,
       title: 'Manage Your Schedule',
       description:
           'Keep track of events you\'re interested in and organize your campus life efficiently.',
-      icon: Icons.schedule_rounded,
-      color: AppTheme.primary,
     ),
   ];
 
@@ -49,9 +46,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _goToNextPage() {
-    if (_currentPage < screens.length - 1) {
+    if (_currentPage < _screens.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
     } else {
@@ -70,17 +67,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // ── Skip Button ────────────────────────────────────────────────
             Align(
               alignment: Alignment.topRight,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(0, 12, 20, 0),
                 child: TextButton(
                   onPressed: _navigateToLogin,
-                  child: Text(
+                  child: const Text(
                     'Skip',
                     style: TextStyle(
-                      fontFamily: AppTheme.fontRegular,
+                      fontFamily: AppTheme.fontBold,
                       fontSize: 14,
                       color: AppTheme.textMuted,
                     ),
@@ -88,58 +85,66 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
             ),
-            // Page View
+
+            // ── Page View ──────────────────────────────────────────────────
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemCount: screens.length,
-                itemBuilder: (context, index) {
-                  return screens[index];
-                },
+                onPageChanged: (index) => setState(() => _currentPage = index),
+                itemCount: _screens.length,
+                itemBuilder: (context, index) =>
+                    _OnboardingSlide(data: _screens[index]),
               ),
             ),
-            // Indicators and Next Button
+
+            // ── Dots + Button ──────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
               child: Column(
                 children: [
                   // Dot indicators
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      screens.length,
-                      (index) => Container(
-                        height: 8,
-                        width: _currentPage == index ? 24 : 8,
+                      _screens.length,
+                      (i) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 8,
+                        width: _currentPage == i ? 24 : 8,
                         decoration: BoxDecoration(
-                          color: _currentPage == index
+                          color: _currentPage == i
                               ? AppTheme.primary
-                              : AppTheme.primary.withValues(alpha: 0.3),
+                              : AppTheme.primary.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // Next button
+                  const SizedBox(height: 28),
+
+                  // Next / Get Started button
                   SizedBox(
                     width: double.infinity,
                     height: 54,
-                    child: FilledButton(
+                    child: ElevatedButton(
                       onPressed: _goToNextPage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       child: Text(
-                        _currentPage == screens.length - 1
+                        _currentPage == _screens.length - 1
                             ? 'Get Started'
                             : 'Next',
                         style: const TextStyle(
                           fontFamily: AppTheme.fontBold,
-                          fontSize: 16,
+                          fontSize: 17,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -154,52 +159,57 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 }
 
-class OnboardingScreen extends StatelessWidget {
+// ── Onboarding Data Model ─────────────────────────────────────────────────────
+class _OnboardingData {
+  final IconData icon;
   final String title;
   final String description;
-  final IconData icon;
-  final Color color;
-
-  const OnboardingScreen({super.key, 
+  const _OnboardingData({
+    required this.icon,
     required this.title,
     required this.description,
-    required this.icon,
-    required this.color,
   });
+}
+
+// ── Onboarding Slide ──────────────────────────────────────────────────────────
+class _OnboardingSlide extends StatelessWidget {
+  final _OnboardingData data;
+  const _OnboardingSlide({required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(48),
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 100, color: color),
+            child: Icon(data.icon, size: 80, color: AppTheme.primary),
           ),
           const SizedBox(height: 48),
           Text(
-            title,
-            style: TextStyle(
-              fontFamily: AppTheme.fontBold,
-              fontSize: 28,
+            data.title,
+            style: const TextStyle(
+              fontFamily: AppTheme.fontExtraBold,
+              fontSize: 26,
               color: AppTheme.textDark,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            description,
-            style: TextStyle(
+            data.description,
+            style: const TextStyle(
               fontFamily: AppTheme.fontRegular,
-              fontSize: 16,
+              fontSize: 15,
               color: AppTheme.textMuted,
-              height: 1.5,
+              height: 1.6,
             ),
             textAlign: TextAlign.center,
           ),
