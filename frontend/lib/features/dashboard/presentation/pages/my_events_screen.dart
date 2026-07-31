@@ -1,224 +1,234 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uni_sphere/core/api/uni_api_service.dart';
+import 'package:uni_sphere/core/models/event_models.dart';
+import 'package:uni_sphere/core/services/saved_events_provider.dart';
+import 'package:uni_sphere/core/widgets/dash_widgets.dart';
+import 'package:uni_sphere/core/widgets/event_cover.dart';
+import 'package:uni_sphere/themes/app_colors.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
 
-class MyEventsScreen extends StatefulWidget {
+class MyEventsScreen extends ConsumerStatefulWidget {
   const MyEventsScreen({super.key});
 
   @override
-  State<MyEventsScreen> createState() => _MyEventsScreenState();
+  ConsumerState<MyEventsScreen> createState() => _MyEventsScreenState();
 }
 
-class _MyEventsScreenState extends State<MyEventsScreen>
+class _MyEventsScreenState extends ConsumerState<MyEventsScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  final List<Map<String, dynamic>> _interestedEvents = [
-    {
-      'iconBg': const Color(0xFFE8EAF6),
-      'icon': Icons.laptop_mac_outlined,
-      'iconColor': const Color(0xFF5C6BC0),
-      'title': 'Tech Talk 2024',
-      'date': '2 May 2026, 10:00 AM',
-      'location': 'Seminar Hall',
-    },
-    {
-      'iconBg': const Color(0xFFFCE4EC),
-      'icon': Icons.music_note_rounded,
-      'iconColor': const Color(0xFFE91E63),
-      'title': 'Cultural Fest',
-      'date': '6 May 2026, 5:00 PM',
-      'location': 'Open Auditorium',
-    },
-    {
-      'iconBg': const Color(0xFFF1F8E9),
-      'icon': Icons.sports_soccer_rounded,
-      'iconColor': const Color(0xFF558B2F),
-      'title': 'Sports Meet',
-      'date': '10 May 2026, 9:00 AM',
-      'location': 'College Ground',
-    },
-  ];
+  late TabController _tabs;
+  bool _loading = true;
+  List<RegistrationModel> _regs = [];
+  String? _busyId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabs.dispose();
     super.dispose();
   }
 
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final regs = await ref.read(uniApiProvider).getMyRegistrations();
+      if (!mounted) return;
+      setState(() {
+        _regs = regs.where((r) => r.status != 'cancelled').toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regs = [];
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _cancel(RegistrationModel reg) async {
+    setState(() => _busyId = reg.id);
+    try {
+      await ref.read(uniApiProvider).cancelRegistration(reg.id);
+      if (!mounted) return;
+      setState(() {
+        _regs.removeWhere((r) => r.id == reg.id);
+        _busyId = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busyId = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppTheme.primary,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'My Events',
-          style: TextStyle(
-            fontFamily: AppTheme.fontBold,
-            fontSize: 20,
-            color: Colors.white,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(46),
-          child: Container(
-            color: Colors.white,
-            child: IgnorePointer(
-              child: TabBar(
-                controller: _tabController,
-                labelColor: AppTheme.primary,
-                unselectedLabelColor: const Color(0xFF9E9E9E),
-                labelStyle: const TextStyle(
+    final saved = ref.watch(savedEventsProvider);
+
+    return SafeArea(
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'My Events',
+                style: TextStyle(
                   fontFamily: AppTheme.fontBold,
-                  fontSize: 14,
+                  fontSize: 22,
+                  color: AppColors.dashText,
                 ),
-                unselectedLabelStyle: const TextStyle(
-                  fontFamily: AppTheme.fontRegular,
-                  fontSize: 14,
-                ),
-                indicatorColor: AppTheme.primary,
-                indicatorWeight: 3,
-                indicatorSize: TabBarIndicatorSize.tab,
-                tabs: const [
-                  Tab(text: 'Interested'),
-                  Tab(text: 'Attended'),
-                ],
               ),
             ),
           ),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: _interestedEvents.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, i) {
-              final e = _interestedEvents[i];
-              return _MyEventTile(
-                iconBg: e['iconBg'] as Color,
-                icon: e['icon'] as IconData,
-                iconColor: e['iconColor'] as Color,
-                title: e['title'] as String,
-                date: e['date'] as String,
-                location: e['location'] as String,
-              );
-            },
+          TabBar(
+            controller: _tabs,
+            labelColor: AppColors.dashAccent,
+            unselectedLabelColor: AppColors.dashMuted,
+            indicatorColor: AppColors.dashAccent,
+            labelStyle: const TextStyle(fontFamily: AppTheme.fontBold),
+            tabs: const [
+              Tab(text: 'Registered'),
+              Tab(text: 'Saved'),
+            ],
           ),
-          const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.event_available_outlined,
-                  size: 64,
-                  color: Color(0xFFBDBDBD),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'No attended events yet',
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontBold,
-                    fontSize: 16,
-                    color: Color(0xFF9E9E9E),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MyEventTile extends StatelessWidget {
-  final Color iconBg;
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String date;
-  final String location;
-
-  const _MyEventTile({
-    required this.iconBg,
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.date,
-    required this.location,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 32),
-          ),
-          const SizedBox(width: 14),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: TabBarView(
+              controller: _tabs,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontBold,
-                    fontSize: 15,
-                    color: AppTheme.textDark,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  date,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontRegular,
-                    fontSize: 13,
-                    color: AppTheme.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  location,
-                  style: const TextStyle(
-                    fontFamily: AppTheme.fontRegular,
-                    fontSize: 13,
-                    color: AppTheme.textMuted,
-                  ),
-                ),
+                _loading
+                    ? const DashLoading()
+                    : RefreshIndicator(
+                        color: AppColors.dashAccent,
+                        onRefresh: _load,
+                        child: _regs.isEmpty
+                            ? ListView(
+                                children: const [
+                                  SizedBox(height: 80),
+                                  EmptyState(
+                                    icon: Icons.event_busy_outlined,
+                                    title: 'No registered events',
+                                    subtitle:
+                                        'Browse Home or Discover to join.',
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                                itemCount: _regs.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (context, i) {
+                                  final reg = _regs[i];
+                                  final e = reg.event;
+                                  final prize = (e?.cashPrize ?? '').trim();
+                                  return DashCard(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          reg.eventTitle,
+                                          style: const TextStyle(
+                                            fontFamily: AppTheme.fontBold,
+                                            fontSize: 15,
+                                            color: AppColors.dashText,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '${e?.formattedDate ?? ''} · ${e?.location ?? ''}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.dashMuted,
+                                          ),
+                                        ),
+                                        if (prize.isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Prize: $prize',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.dashAccentText,
+                                              fontFamily: AppTheme.fontBold,
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Pass: ${reg.passCode}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.dashAccentText,
+                                            fontFamily: AppTheme.fontBold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: _busyId == reg.id
+                                                ? null
+                                                : () => _cancel(reg),
+                                            child: Text(
+                                              _busyId == reg.id
+                                                  ? 'Cancelling…'
+                                                  : 'Cancel registration',
+                                              style: const TextStyle(
+                                                color: AppColors.mRed,
+                                                fontFamily: AppTheme.fontBold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                saved.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: 80),
+                          EmptyState(
+                            icon: Icons.favorite_border_rounded,
+                            title: 'No saved events',
+                            subtitle:
+                                'Tap the heart on an event card to save it here.',
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                        itemCount: saved.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 14),
+                        itemBuilder: (context, i) {
+                          final e = saved[i];
+                          return EventImageCard(
+                            event: e,
+                            saved: true,
+                            onToggleSave: () => ref
+                                .read(savedEventsProvider.notifier)
+                                .toggle(e),
+                          );
+                        },
+                      ),
               ],
             ),
           ),
