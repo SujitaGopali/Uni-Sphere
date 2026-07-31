@@ -1,64 +1,165 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
+import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
+import { HttpException } from "../exceptions/http-exception";
 import { UserService } from "../services/user.service";
 import { ApiResponseHelper } from "../utils/apihelper.util";
-import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
 
 export class UserController {
-  private userService = new UserService();
+  constructor(private readonly userService: UserService) {}
 
-  public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const parsedBody = CreateUserDTO.safeParse(req.body);
-      if (!parsedBody.success) {
-        const errorMsg = parsedBody.error.errors.map(e => e.message).join(", ");
-        res.status(400).json(ApiResponseHelper.error(400, errorMsg));
+      const parsed = CreateUserDTO.safeParse(req.body);
+
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json(
+            ApiResponseHelper.error(
+              400,
+              parsed.error.issues.map((issue) => issue.message).join(", ")
+            )
+          );
         return;
       }
 
-      const newUser = await this.userService.register(parsedBody.data);
-      const userResponse = newUser.toObject();
-      delete (userResponse as any).password;
+      const user = await this.userService.createUser(parsed.data);
 
-      res.status(201).json(ApiResponseHelper.success(201, "User registered successfully", { user: userResponse }));
+      res
+        .status(201)
+        .json(
+          ApiResponseHelper.success(201, "User registered successfully", user)
+        );
     } catch (error) {
-      next(error);
+      if (error instanceof HttpException) {
+        res
+          .status(error.status)
+          .json(ApiResponseHelper.error(error.status, error.message));
+        return;
+      }
+
+      res.status(500).json(ApiResponseHelper.error(500, "Internal server error"));
     }
   };
 
-  public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  login = async (req: Request, res: Response): Promise<void> => {
     try {
-      const parsedBody = LoginUserDTO.safeParse(req.body);
-      if (!parsedBody.success) {
-        const errorMsg = parsedBody.error.errors.map(e => e.message).join(", ");
-        res.status(400).json(ApiResponseHelper.error(400, errorMsg));
+      const parsed = LoginUserDTO.safeParse(req.body);
+
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json(
+            ApiResponseHelper.error(
+              400,
+              parsed.error.issues.map((issue) => issue.message).join(", ")
+            )
+          );
         return;
       }
 
-      const { user, token } = await this.userService.login(parsedBody.data);
-      const userResponse = user.toObject();
-      delete (userResponse as any).password;
-
-      res.status(200).json(ApiResponseHelper.success(200, "Login successful", { user: userResponse, token }));
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  public me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      if (!req.user) {
-        res.status(401).json(ApiResponseHelper.error(401, "Authorization token required"));
-        return;
-      }
-
-      const userResponse = req.user.toObject();
-      delete (userResponse as any).password;
+      const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+      const userAgent = req.headers['user-agent'] || undefined;
+      
+      const result = await this.userService.loginUser(parsed.data, ipAddress, userAgent);
 
       res
         .status(200)
-        .json(ApiResponseHelper.success(200, "Current user fetched successfully", { user: userResponse }));
+        .json(ApiResponseHelper.success(200, "Login successful", result));
     } catch (error) {
-      next(error);
+      if (error instanceof HttpException) {
+        res
+          .status(error.status)
+          .json(ApiResponseHelper.error(error.status, error.message));
+        return;
+      }
+
+      res.status(500).json(ApiResponseHelper.error(500, "Internal server error"));
+    }
+  };
+
+  whoami = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json(ApiResponseHelper.error(401, "Unauthorized"));
+        return;
+      }
+
+      // getUserById uses omitPassword — strips idImage + oversized data-URL avatars
+      // so whoami cannot stall Chrome / blow response size.
+      const safeUser = await this.userService.getUserById(req.user._id.toString());
+
+      res
+        .status(200)
+        .json(ApiResponseHelper.success(200, "User detail retrieved", safeUser));
+    } catch (error) {
+      console.error(error);
+      if (error instanceof HttpException) {
+        res.status(error.status).json(ApiResponseHelper.error(error.status, error.message));
+        return;
+      }
+      res.status(500).json(ApiResponseHelper.error(500, "Internal server error"));
+    }
+  };
+
+  updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json(ApiResponseHelper.error(401, "Unauthorized"));
+        return;
+      }
+
+      const userId = req.user._id.toString();
+
+      let profileImagePath: string | undefined = undefined;
+      if (req.file) {
+        profileImagePath = `/uploads/${req.file.filename}`;
+      }
+
+      const updatedUser = await this.userService.updateProfile(userId, req.body, profileImagePath);
+
+      res
+        .status(200)
+        .json(ApiResponseHelper.success(200, "Profile updated successfully", updatedUser));
+    } catch (error) {
+      if (error instanceof HttpException) {
+        res
+          .status(error.status)
+          .json(ApiResponseHelper.error(error.status, error.message));
+        return;
+      }
+      console.error(error);
+      res.status(500).json(ApiResponseHelper.error(500, "Internal server error"));
+    }
+  };
+
+  submitVerification = async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json(ApiResponseHelper.error(401, "Unauthorized"));
+        return;
+      }
+
+      if (!req.body.idImage) {
+        res.status(400).json(ApiResponseHelper.error(400, "idImage is required"));
+        return;
+      }
+
+      const userId = req.user._id.toString();
+      const updatedUser = await this.userService.submitVerification(userId, req.body.idImage);
+
+      res
+        .status(200)
+        .json(ApiResponseHelper.success(200, "Verification submitted successfully", updatedUser));
+    } catch (error) {
+      if (error instanceof HttpException) {
+        res
+          .status(error.status)
+          .json(ApiResponseHelper.error(error.status, error.message));
+        return;
+      }
+      console.error(error);
+      res.status(500).json(ApiResponseHelper.error(500, "Internal server error"));
     }
   };
 }
