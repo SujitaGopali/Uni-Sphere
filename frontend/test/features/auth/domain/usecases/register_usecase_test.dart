@@ -17,19 +17,20 @@ void main() {
   });
 
   const tAuthEntity = AuthEntity(
-    name: 'Test User',
+    firstName: 'Test',
+    lastName: 'User',
     email: 'test@example.com',
     password: 'password123',
-    phone: '',
-    address: '',
+    phoneNumber: '',
+    college: '',
   );
 
   test('should return true when registration is successful', () async {
     when(mockAuthRepository.register(any))
         .thenAnswer((_) async => const Right(true));
-    
+
     final result = await usecase(tAuthEntity);
-    
+
     expect(result, const Right(true));
     verify(mockAuthRepository.register(tAuthEntity));
     verifyNoMoreInteractions(mockAuthRepository);
@@ -39,9 +40,9 @@ void main() {
     const tFailure = ApiFailure('Registration failed');
     when(mockAuthRepository.register(any))
         .thenAnswer((_) async => const Left(tFailure));
-    
+
     final result = await usecase(tAuthEntity);
-    
+
     expect(result, const Left(tFailure));
     verify(mockAuthRepository.register(tAuthEntity));
     verifyNoMoreInteractions(mockAuthRepository);

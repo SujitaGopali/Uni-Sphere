@@ -1,4 +1,3 @@
-
 import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,12 +13,15 @@ import '../../helpers/test_helper.mocks.dart';
 
 void main() {
   late MockIAuthRepository mockRepository;
+  late MockAuthRemoteDataSource mockRemote;
   late ProviderContainer container;
 
   setUp(() {
     mockRepository = MockIAuthRepository();
+    mockRemote = MockAuthRemoteDataSource();
     container = ProviderContainer(
       overrides: [
+        authRemoteDataSourceProvider.overrideWithValue(mockRemote),
         registerUseCaseProvider
             .overrideWith((ref) => RegisterUseCase(mockRepository)),
         loginUseCaseProvider
@@ -37,11 +39,12 @@ void main() {
   const tEmail = 'test@example.com';
   const tPassword = 'password123';
   const tAuthEntity = AuthEntity(
-    name: 'Test User',
+    firstName: 'Test',
+    lastName: 'User',
     email: tEmail,
     password: '',
-    phone: '',
-    address: '',
+    phoneNumber: '',
+    college: '',
   );
 
   test('initial state should be AuthState()', () {
@@ -61,7 +64,7 @@ void main() {
     final state = container.read(authViewModelProvider);
     expect(state.isLoading, false);
     expect(state.isSuccess, true);
-    expect(state.user, tAuthEntity);
+    expect(state.user, isNull);
     expect(state.error, isNull);
   });
 
@@ -79,10 +82,12 @@ void main() {
   });
 
   test('should update state on successful login', () async {
-    when(mockRepository.login(any, any))
-        .thenAnswer((_) async => const Right(tAuthEntity));
+    when(mockRemote.loginEntity(any, any))
+        .thenAnswer((_) async => tAuthEntity);
 
-    await container.read(authViewModelProvider.notifier).login(tEmail, tPassword);
+    await container
+        .read(authViewModelProvider.notifier)
+        .login(tEmail, tPassword);
 
     final state = container.read(authViewModelProvider);
     expect(state.isLoading, false);
@@ -92,11 +97,12 @@ void main() {
   });
 
   test('should update state with error on failed login', () async {
-    const tFailure = ApiFailure('Login failed');
-    when(mockRepository.login(any, any))
-        .thenAnswer((_) async => const Left(tFailure));
+    when(mockRemote.loginEntity(any, any))
+        .thenThrow(Exception('Login failed'));
 
-    await container.read(authViewModelProvider.notifier).login(tEmail, tPassword);
+    await container
+        .read(authViewModelProvider.notifier)
+        .login(tEmail, tPassword);
 
     final state = container.read(authViewModelProvider);
     expect(state.isLoading, false);
