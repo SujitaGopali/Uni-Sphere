@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uni_sphere/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:uni_sphere/themes/app_colors.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -33,13 +34,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     ref.listen(authViewModelProvider, (previous, next) {
       if (next.isSuccess && next.user != null) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (_) => false);
       }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.mRed,
           ),
         );
         ref.read(authViewModelProvider.notifier).resetState();
@@ -49,144 +50,159 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isLoading = ref.watch(authViewModelProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surfaceCard,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 48),
-
-              // ── Logo / Icon ──────────────────────────────────────────────
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.35),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.school_rounded,
-                  size: 50,
-                  color: Colors.white,
+              const SizedBox(height: 28),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      Navigator.pushReplacementNamed(context, '/landing'),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                  label: const Text('Back'),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.muted),
                 ),
               ),
-              const SizedBox(height: 28),
-
-              // ── Title ────────────────────────────────────────────────────
+              const SizedBox(height: 12),
               const Text(
-                'UniSphere',
+                'Welcome back',
                 style: TextStyle(
                   fontFamily: AppTheme.fontExtraBold,
                   fontSize: 28,
-                  color: AppTheme.textDark,
+                  color: AppColors.onDark,
                 ),
               ),
               const SizedBox(height: 6),
               const Text(
-                'Sign in to your account',
+                'Sign in to UniSphere',
                 style: TextStyle(
                   fontFamily: AppTheme.fontRegular,
-                  fontSize: 15,
-                  color: AppTheme.textMuted,
+                  fontSize: 14,
+                  color: AppColors.muted,
                 ),
               ),
-              const SizedBox(height: 40),
-
-              // ── Email Field ───────────────────────────────────────────────
-              _InputField(
-                controller: _emailController,
-                hintText: 'Email address',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Password Field ────────────────────────────────────────────
-              _InputField(
-                controller: _passwordController,
-                hintText: 'Password',
-                icon: Icons.lock_outline_rounded,
-                obscureText: _obscurePassword,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: const Color(0xFF9E9E9E),
-                    size: 20,
-                  ),
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // ── Forgot Password ───────────────────────────────────────────
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontBold,
-                      fontSize: 13,
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Login Button ──────────────────────────────────────────────
-              SizedBox(
+              const SizedBox(height: 28),
+              Container(
                 width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.canvas,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.hairline),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.carbon.withValues(alpha: 0.35),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Text(
-                          'Login',
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Email Address',
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontBold,
+                        fontSize: 12,
+                        color: AppColors.bodyStrong,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _emailController,
+                      hint: 'you@example.com',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Password',
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontBold,
+                        fontSize: 12,
+                        color: AppColors.bodyStrong,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _passwordController,
+                      hint: '••••••••',
+                      icon: Icons.lock_outline_rounded,
+                      obscureText: _obscurePassword,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.muted,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Forgot password is coming soon.',
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Forgot Password?',
                           style: TextStyle(
                             fontFamily: AppTheme.fontBold,
-                            fontSize: 17,
-                            color: Colors.white,
+                            fontSize: 12,
+                            color: AppColors.mBlueDark,
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: isLoading ? null : _handleLogin,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.mBlueDark,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.4,
+                                ),
+                              )
+                            : const Text(
+                                'Sign in',
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontBold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 32),
-
-              // ── Sign Up Link ──────────────────────────────────────────────
+              const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -195,7 +211,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: TextStyle(
                       fontFamily: AppTheme.fontRegular,
                       fontSize: 14,
-                      color: AppTheme.textMuted,
+                      color: AppColors.muted,
                     ),
                   ),
                   GestureDetector(
@@ -205,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       style: TextStyle(
                         fontFamily: AppTheme.fontBold,
                         fontSize: 14,
-                        color: AppTheme.primary,
+                        color: AppColors.mBlueDark,
                       ),
                     ),
                   ),
@@ -220,62 +236,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-// ── Reusable Input Field ──────────────────────────────────────────────────────
-class _InputField extends StatelessWidget {
+class _AuthField extends StatelessWidget {
   final TextEditingController controller;
-  final String hintText;
+  final String hint;
   final IconData icon;
   final bool obscureText;
-  final Widget? suffixIcon;
+  final Widget? suffix;
   final TextInputType? keyboardType;
 
-  const _InputField({
+  const _AuthField({
     required this.controller,
-    required this.hintText,
+    required this.hint,
     required this.icon,
     this.obscureText = false,
-    this.suffixIcon,
+    this.suffix,
     this.keyboardType,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(
+        fontFamily: AppTheme.fontRegular,
+        fontSize: 15,
+        color: AppColors.onDark,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF9E9E9E), size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: obscureText,
-              keyboardType: keyboardType,
-              style: const TextStyle(
-                fontFamily: AppTheme.fontRegular,
-                fontSize: 15,
-                color: AppTheme.textDark,
-              ),
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: const TextStyle(
-                  fontFamily: AppTheme.fontRegular,
-                  fontSize: 14,
-                  color: Color(0xFFBDBDBD),
-                ),
-                border: InputBorder.none,
-                isDense: true,
-              ),
-            ),
-          ),
-          ?suffixIcon,
-        ],
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.carbon, fontSize: 14),
+        prefixIcon: Icon(icon, color: AppColors.muted, size: 20),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: AppColors.surfaceElevated.withValues(alpha: 0.45),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.hairline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.hairline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.mBlueLight, width: 1.5),
+        ),
       ),
     );
   }
