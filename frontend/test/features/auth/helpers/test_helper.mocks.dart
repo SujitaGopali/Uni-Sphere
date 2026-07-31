@@ -3,15 +3,21 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i8;
 
 import 'package:dartz/dartz.dart' as _i2;
+import 'package:dio/dio.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:uni_sphere/core/error/failures.dart' as _i5;
-import 'package:uni_sphere/features/auth/domain/entities/auth_entity.dart'
+import 'package:uni_sphere/core/error/failures.dart' as _i9;
+import 'package:uni_sphere/core/services/auth_token_storage.dart' as _i4;
+import 'package:uni_sphere/features/auth/data/datasources/remote/auth_remote_datasource.dart'
+    as _i10;
+import 'package:uni_sphere/features/auth/data/models/auth_hive_model.dart'
     as _i6;
+import 'package:uni_sphere/features/auth/domain/entities/auth_entity.dart'
+    as _i5;
 import 'package:uni_sphere/features/auth/domain/repositories/auth_reposity.dart'
-    as _i3;
+    as _i7;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -36,33 +42,74 @@ class _FakeEither_0<L, R> extends _i1.SmartFake implements _i2.Either<L, R> {
         );
 }
 
+class _FakeDio_1 extends _i1.SmartFake implements _i3.Dio {
+  _FakeDio_1(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeAuthTokenStorage_2 extends _i1.SmartFake
+    implements _i4.AuthTokenStorage {
+  _FakeAuthTokenStorage_2(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeAuthEntity_3 extends _i1.SmartFake implements _i5.AuthEntity {
+  _FakeAuthEntity_3(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeAuthHiveModel_4 extends _i1.SmartFake implements _i6.AuthHiveModel {
+  _FakeAuthHiveModel_4(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [IAuthRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockIAuthRepository extends _i1.Mock implements _i3.IAuthRepository {
+class MockIAuthRepository extends _i1.Mock implements _i7.IAuthRepository {
   MockIAuthRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<_i2.Either<_i5.Failure, bool>> register(_i6.AuthEntity? entity) =>
+  _i8.Future<_i2.Either<_i9.Failure, bool>> register(_i5.AuthEntity? entity) =>
       (super.noSuchMethod(
         Invocation.method(
           #register,
           [entity],
         ),
-        returnValue: _i4.Future<_i2.Either<_i5.Failure, bool>>.value(
-            _FakeEither_0<_i5.Failure, bool>(
+        returnValue: _i8.Future<_i2.Either<_i9.Failure, bool>>.value(
+            _FakeEither_0<_i9.Failure, bool>(
           this,
           Invocation.method(
             #register,
             [entity],
           ),
         )),
-      ) as _i4.Future<_i2.Either<_i5.Failure, bool>>);
+      ) as _i8.Future<_i2.Either<_i9.Failure, bool>>);
 
   @override
-  _i4.Future<_i2.Either<_i5.Failure, _i6.AuthEntity>> login(
+  _i8.Future<_i2.Either<_i9.Failure, _i5.AuthEntity>> login(
     String? email,
     String? password,
   ) =>
@@ -74,8 +121,8 @@ class MockIAuthRepository extends _i1.Mock implements _i3.IAuthRepository {
             password,
           ],
         ),
-        returnValue: _i4.Future<_i2.Either<_i5.Failure, _i6.AuthEntity>>.value(
-            _FakeEither_0<_i5.Failure, _i6.AuthEntity>(
+        returnValue: _i8.Future<_i2.Either<_i9.Failure, _i5.AuthEntity>>.value(
+            _FakeEither_0<_i9.Failure, _i5.AuthEntity>(
           this,
           Invocation.method(
             #login,
@@ -85,22 +132,127 @@ class MockIAuthRepository extends _i1.Mock implements _i3.IAuthRepository {
             ],
           ),
         )),
-      ) as _i4.Future<_i2.Either<_i5.Failure, _i6.AuthEntity>>);
+      ) as _i8.Future<_i2.Either<_i9.Failure, _i5.AuthEntity>>);
 
   @override
-  _i4.Future<_i2.Either<_i5.Failure, bool>> logout(String? email) =>
+  _i8.Future<_i2.Either<_i9.Failure, bool>> logout(String? email) =>
       (super.noSuchMethod(
         Invocation.method(
           #logout,
           [email],
         ),
-        returnValue: _i4.Future<_i2.Either<_i5.Failure, bool>>.value(
-            _FakeEither_0<_i5.Failure, bool>(
+        returnValue: _i8.Future<_i2.Either<_i9.Failure, bool>>.value(
+            _FakeEither_0<_i9.Failure, bool>(
           this,
           Invocation.method(
             #logout,
             [email],
           ),
         )),
-      ) as _i4.Future<_i2.Either<_i5.Failure, bool>>);
+      ) as _i8.Future<_i2.Either<_i9.Failure, bool>>);
+}
+
+/// A class which mocks [AuthRemoteDataSource].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockAuthRemoteDataSource extends _i1.Mock
+    implements _i10.AuthRemoteDataSource {
+  MockAuthRemoteDataSource() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Dio get dio => (super.noSuchMethod(
+        Invocation.getter(#dio),
+        returnValue: _FakeDio_1(
+          this,
+          Invocation.getter(#dio),
+        ),
+      ) as _i3.Dio);
+
+  @override
+  _i4.AuthTokenStorage get tokenStorage => (super.noSuchMethod(
+        Invocation.getter(#tokenStorage),
+        returnValue: _FakeAuthTokenStorage_2(
+          this,
+          Invocation.getter(#tokenStorage),
+        ),
+      ) as _i4.AuthTokenStorage);
+
+  @override
+  _i8.Future<bool> register(_i6.AuthHiveModel? user) => (super.noSuchMethod(
+        Invocation.method(
+          #register,
+          [user],
+        ),
+        returnValue: _i8.Future<bool>.value(false),
+      ) as _i8.Future<bool>);
+
+  @override
+  _i8.Future<_i5.AuthEntity> loginEntity(
+    String? email,
+    String? password,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loginEntity,
+          [
+            email,
+            password,
+          ],
+        ),
+        returnValue: _i8.Future<_i5.AuthEntity>.value(_FakeAuthEntity_3(
+          this,
+          Invocation.method(
+            #loginEntity,
+            [
+              email,
+              password,
+            ],
+          ),
+        )),
+      ) as _i8.Future<_i5.AuthEntity>);
+
+  @override
+  _i8.Future<_i6.AuthHiveModel> login(
+    String? email,
+    String? password,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #login,
+          [
+            email,
+            password,
+          ],
+        ),
+        returnValue: _i8.Future<_i6.AuthHiveModel>.value(_FakeAuthHiveModel_4(
+          this,
+          Invocation.method(
+            #login,
+            [
+              email,
+              password,
+            ],
+          ),
+        )),
+      ) as _i8.Future<_i6.AuthHiveModel>);
+
+  @override
+  _i8.Future<_i5.AuthEntity?> restoreSession() => (super.noSuchMethod(
+        Invocation.method(
+          #restoreSession,
+          [],
+        ),
+        returnValue: _i8.Future<_i5.AuthEntity?>.value(),
+      ) as _i8.Future<_i5.AuthEntity?>);
+
+  @override
+  _i8.Future<bool> logout(String? email) => (super.noSuchMethod(
+        Invocation.method(
+          #logout,
+          [email],
+        ),
+        returnValue: _i8.Future<bool>.value(false),
+      ) as _i8.Future<bool>);
 }
