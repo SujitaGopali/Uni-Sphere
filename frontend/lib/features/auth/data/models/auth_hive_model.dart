@@ -33,18 +33,23 @@ class AuthHiveModel extends HiveObject {
       name: entity.name,
       email: entity.email,
       password: entity.password,
-      phone: entity.phone,
-      address: entity.address,
+      phone: entity.phoneNumber ?? '',
+      address: entity.college ?? '',
     );
   }
 
   AuthEntity toEntity() {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final first = parts.isNotEmpty ? parts.first : 'User';
+    final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
     return AuthEntity(
-      name: name,
+      firstName: first,
+      lastName: last,
       email: email,
       password: password,
-      phone: phone,
-      address: address,
+      phoneNumber: phone,
+      college: address,
+      role: 'user',
     );
   }
 }
