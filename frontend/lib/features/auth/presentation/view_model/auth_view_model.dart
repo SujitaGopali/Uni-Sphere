@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:uni_sphere/core/services/auth_token_storage.dart';
 import 'package:uni_sphere/core/services/hive/hive_service.dart';
 import 'package:uni_sphere/features/auth/data/datasources/local/auth_local_datasource.dart';
@@ -16,10 +15,6 @@ final hiveServiceProvider = Provider<HiveService>((ref) {
   throw UnimplementedError('HiveService must be overridden in main.dart');
 });
 
-final httpClientProvider = Provider<http.Client>((ref) {
-  return http.Client();
-});
-
 final authTokenStorageProvider = Provider<AuthTokenStorage>((ref) {
   return AuthTokenStorage();
 });
@@ -29,8 +24,7 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 });
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthRemoteDataSource(
-    client: ref.watch(httpClientProvider),
+  return AuthRemoteDataSource.create(
     tokenStorage: ref.watch(authTokenStorageProvider),
   );
 });
@@ -56,6 +50,7 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
 final authViewModelProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
+    remote: ref.watch(authRemoteDataSourceProvider),
     registerUseCase: ref.watch(registerUseCaseProvider),
     loginUseCase: ref.watch(loginUseCaseProvider),
     logoutUseCase: ref.watch(logoutUseCaseProvider),
@@ -63,15 +58,36 @@ final authViewModelProvider =
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {
+  final AuthRemoteDataSource remote;
   final RegisterUseCase registerUseCase;
   final LoginUseCase loginUseCase;
   final LogoutUseCase logoutUseCase;
 
   AuthNotifier({
+    required this.remote,
     required this.registerUseCase,
     required this.loginUseCase,
     required this.logoutUseCase,
   }) : super(const AuthState());
+
+  Future<void> restoreSession() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final user = await remote.restoreSession();
+      if (user != null) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true,
+          user: user,
+          clearError: true,
+        );
+      } else {
+        state = const AuthState();
+      }
+    } catch (_) {
+      state = const AuthState();
+    }
+  }
 
   Future<void> register(AuthEntity entity) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -85,30 +101,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
       (success) => state = state.copyWith(
         isLoading: false,
         isSuccess: success,
-        user: entity,
         clearError: true,
+        clearUser: true,
       ),
     );
   }
 
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    final result = await loginUseCase(
-      LoginParams(email: email, password: password),
-    );
-    result.fold(
-      (failure) => state = state.copyWith(
-        isLoading: false,
-        isSuccess: false,
-        error: failure.message,
-      ),
-      (user) => state = state.copyWith(
+    try {
+      final user = await remote.loginEntity(email, password);
+      state = state.copyWith(
         isLoading: false,
         isSuccess: true,
         user: user,
         clearError: true,
-      ),
-    );
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isSuccess: false,
+        error: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> refreshUser() async {
+    try {
+      final user = await remote.restoreSession();
+      if (user != null) {
+        state = state.copyWith(user: user, isSuccess: true);
+      }
+    } catch (_) {}
+  }
+
+  void setUser(AuthEntity user) {
+    state = state.copyWith(user: user, isSuccess: true);
   }
 
   Future<void> logout(String email) async {
@@ -125,6 +153,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void resetState() {
+    state = AuthState(user: state.user);
+  }
+
+  void clearAuth() {
     state = const AuthState();
   }
 }
