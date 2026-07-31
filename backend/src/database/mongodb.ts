@@ -1,13 +1,20 @@
 import mongoose from "mongoose";
-import { MONGO_URI } from "../configs/constant";
+import { MONGODB_URL } from "../configs/constant";
 
-export const connectDatabase = async (): Promise<void> => {
+export async function connectToMongoDB(): Promise<void> {
   try {
-    console.log(`Connecting to MongoDB at ${MONGO_URI}...`);
-    await mongoose.connect(MONGO_URI);
-    console.log("Connected to MongoDB successfully");
+    await mongoose.connect(MONGODB_URL);
+    console.log("MongoDB connected successfully");
   } catch (error) {
     console.error("MongoDB connection error:", error);
     process.exit(1);
   }
-};
+}
+
+
+
+
+
+
+
+
