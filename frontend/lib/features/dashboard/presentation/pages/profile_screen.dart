@@ -1,257 +1,785 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uni_sphere/core/api/api_endpoints.dart';
+import 'package:uni_sphere/core/api/uni_api_service.dart';
+import 'package:uni_sphere/core/constants/colleges.dart';
+import 'package:uni_sphere/core/services/auto_brightness_provider.dart';
+import 'package:uni_sphere/core/widgets/dash_widgets.dart';
 import 'package:uni_sphere/features/auth/presentation/view_model/auth_view_model.dart';
-import 'package:uni_sphere/features/dashboard/presentation/pages/edit_profile_page.dart';
-import 'package:uni_sphere/features/dashboard/presentation/view_model/profile_editor_provider.dart';
+import 'package:uni_sphere/themes/app_colors.dart';
 import 'package:uni_sphere/themes/app_theme.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authViewModelProvider).user;
-    final profileState = ref.watch(profileEditorProvider);
-
-    if (!profileState.initialized) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(profileEditorProvider.notifier).initializeFromUser(user);
-      });
-    }
-
-    final displayName = profileState.initialized
-        ? profileState.fullName
-        : (user?.name ?? 'Student User');
-    final displayEmail = profileState.initialized
-        ? profileState.email
-        : (user?.email ?? 'student@university.edu');
-    final displayStudentId =
-        profileState.initialized ? profileState.studentId : 'UNI-2026-001';
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppTheme.primary,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            fontFamily: AppTheme.fontBold,
-            fontSize: 20,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          // ── Avatar + Name + Email ────────────────────────────────────────
-          const SizedBox(height: 32),
-          Center(
-            child: _ProfileAvatar(
-              imageBytes: profileState.profileImageBytes,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            displayName,
-            style: const TextStyle(
-              fontFamily: AppTheme.fontBold,
-              fontSize: 18,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            displayEmail,
-            style: const TextStyle(
-              fontFamily: AppTheme.fontRegular,
-              fontSize: 14,
-              color: AppTheme.textMuted,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F0FF),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Student ID: $displayStudentId',
-              style: const TextStyle(
-                fontFamily: AppTheme.fontBold,
-                fontSize: 13,
-                color: AppTheme.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-
-          // ── Settings List ─────────────────────────────────────────────────
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _ProfileMenuItem(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit Profile',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const EditProfilePage(),
-                      ),
-                    );
-                  },
-                ),
-                _ProfileMenuItem.disabled(
-                  icon: Icons.lock_outline_rounded,
-                  label: 'Change Password',
-                ),
-                _ProfileMenuItem.disabled(
-                  icon: Icons.qr_code_2_rounded,
-                  label: 'My QR Code',
-                ),
-                _ProfileMenuItem.disabled(
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                ),
-                // ── Logout ──────────────────────────────────────────────────
-                _ProfileMenuItem(
-                  icon: Icons.logout_rounded,
-                  label: 'Logout',
-                  labelColor: const Color(0xFFE53935),
-                  iconColor: const Color(0xFFE53935),
-                  onTap: () async {
-                    final email = user?.email;
-                    if (email == null) return;
-                    await ref.read(profileEditorProvider.notifier).reset();
-                    await ref
-                        .read(authViewModelProvider.notifier)
-                        .logout(email);
-                    if (context.mounted) {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/login',
-                        (_) => false,
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-// ── Profile Menu Item ─────────────────────────────────────────────────────────
-class _ProfileMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final Color? labelColor;
-  final Color? iconColor;
-  final bool enabled;
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  static const _years = ['1', '2', '3', '4'];
 
-  const _ProfileMenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.labelColor,
-    this.iconColor,
-  }) : enabled = true;
+  bool _editing = false;
+  bool _saving = false;
+  bool _loadingSecurity = false;
+  bool _changingPassword = false;
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _dept = TextEditingController();
+  final _studentId = TextEditingController();
+  final _currentPassword = TextEditingController();
+  final _newPassword = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  String? _college;
+  String? _year;
+  String? _pickedImagePath;
+  List<Map<String, dynamic>> _history = [];
+  List<Map<String, dynamic>> _sessions = [];
+  bool _loginAlerts = true;
 
-  const _ProfileMenuItem.disabled({
-    required this.icon,
-    required this.label,
-  })  : onTap = null,
-        labelColor = const Color(0xFFB8B8B8),
-        iconColor = const Color(0xFFB8B8B8),
-        enabled = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncFromUser();
+      _loadSecurity();
+    });
+  }
+
+  void _syncFromUser() {
+    final user = ref.read(authViewModelProvider).user;
+    if (user == null) return;
+    _name.text = user.name;
+    _email.text = user.email;
+    _phone.text = user.phoneNumber ?? '';
+    _dept.text = user.department ?? '';
+    _studentId.text = user.studentId ?? '';
+    _college = user.college;
+    _year = user.year != null && _years.contains(user.year) ? user.year : user.year;
+    _pickedImagePath = null;
+  }
+
+  Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.dashCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: AppColors.dashAccent),
+              title: const Text(
+                'Choose from gallery',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontBold,
+                  color: AppColors.dashText,
+                ),
+              ),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined,
+                  color: AppColors.dashAccent),
+              title: const Text(
+                'Take a photo',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontBold,
+                  color: AppColors.dashText,
+                ),
+              ),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final file = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+    setState(() {
+      _pickedImagePath = file.path;
+      _editing = true;
+    });
+  }
+
+  Future<void> _loadSecurity() async {
+    setState(() => _loadingSecurity = true);
+    try {
+      final api = ref.read(uniApiProvider);
+      final history = await api.getLoginHistory();
+      final sessions = await api.getSessions();
+      if (!mounted) return;
+      setState(() {
+        _history = history;
+        final list = sessions['sessions'];
+        _sessions = list is List
+            ? list
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList()
+            : [];
+        _loginAlerts = sessions['loginAlertsEnabled'] != false;
+        _loadingSecurity = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingSecurity = false);
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final parts = _name.text.trim().split(RegExp(r'\s+'));
+      final updated = await ref.read(uniApiProvider).updateProfile(
+        {
+          'firstName': parts.isNotEmpty ? parts.first : 'User',
+          'lastName': parts.length > 1 ? parts.sublist(1).join(' ') : 'User',
+          'email': _email.text.trim(),
+          'phoneNumber': _phone.text.trim(),
+          'department': _dept.text.trim(),
+          'studentId': _studentId.text.trim(),
+          if (_college != null) 'college': _college,
+          if (_year != null) 'year': _year,
+        },
+        profileImagePath: _pickedImagePath,
+      );
+      ref.read(authViewModelProvider.notifier).setUser(updated);
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _editing = false;
+        _pickedImagePath = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final current = _currentPassword.text;
+    final next = _newPassword.text;
+    final confirm = _confirmPassword.text;
+    if (current.isEmpty || next.isEmpty || confirm.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fill all password fields'),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+      return;
+    }
+    if (next.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('New password must be at least 6 characters'),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+      return;
+    }
+    if (next != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('New passwords do not match'),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _changingPassword = true);
+    try {
+      await ref.read(uniApiProvider).changePassword(
+            currentPassword: current,
+            newPassword: next,
+          );
+      if (!mounted) return;
+      _currentPassword.clear();
+      _newPassword.clear();
+      _confirmPassword.clear();
+      setState(() => _changingPassword = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password updated')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _changingPassword = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.mRed,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _dept.dispose();
+    _studentId.dispose();
+    _currentPassword.dispose();
+    _newPassword.dispose();
+    _confirmPassword.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Color(0xFFF0F0F0)),
+    final user = ref.watch(authViewModelProvider).user;
+    final colleges = getCollegeOptions(user?.college);
+    final photoUrl = ApiEndpoints.resolveMediaUrl(user?.profileImage);
+
+    return SafeArea(
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: ClampingScrollPhysics(),
           ),
-        ),
-        child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: iconColor ?? const Color(0xFF424242),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Profile',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontBold,
+                      fontSize: 22,
+                      color: AppColors.dashText,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (_editing) {
+                      _syncFromUser();
+                      setState(() => _editing = false);
+                    } else {
+                      setState(() => _editing = true);
+                    }
+                  },
+                  child: Text(
+                    _editing ? 'Cancel' : 'Edit',
+                    style: const TextStyle(color: AppColors.dashAccent),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            const SizedBox(height: 16),
+            Center(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: AppColors.dashAccentSoft,
+                    backgroundImage: _pickedImagePath != null
+                        ? FileImage(File(_pickedImagePath!))
+                        : (photoUrl.isNotEmpty
+                            ? NetworkImage(photoUrl) as ImageProvider
+                            : null),
+                    child: (_pickedImagePath == null && photoUrl.isEmpty)
+                        ? Text(
+                            '${user?.firstName.isNotEmpty == true ? user!.firstName[0] : 'U'}'
+                            '${user?.lastName.isNotEmpty == true ? user!.lastName[0] : ''}',
+                            style: const TextStyle(
+                              fontFamily: AppTheme.fontBold,
+                              fontSize: 28,
+                              color: AppColors.dashAccentText,
+                            ),
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Material(
+                      color: AppColors.dashAccent,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _pickPhoto,
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.camera_alt_rounded,
+                            size: 16,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
               child: Text(
-                label,
-                style: TextStyle(
+                user?.name ?? 'Student',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
                   fontFamily: AppTheme.fontBold,
-                  fontSize: 15,
-                  color: labelColor ?? AppTheme.textDark,
+                  fontSize: 18,
+                  color: AppColors.dashText,
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 22,
-              color: enabled
-                  ? (labelColor ?? const Color(0xFFBDBDBD))
-                  : const Color(0xFFD8D8D8),
+            const SizedBox(height: 4),
+            const Center(child: SoftChip(label: 'PARTICIPANT')),
+            const SizedBox(height: 20),
+            DashCard(
+              child: Column(
+                children: [
+                  _field('Full name', _name, enabled: _editing),
+                  _field('Email', _email, enabled: _editing),
+                  _field('Student ID', _studentId, enabled: _editing),
+                  if (_editing) ...[
+                    _dropdown(
+                      label: 'College',
+                      value: colleges.contains(_college) ? _college : null,
+                      items: colleges,
+                      onChanged: (v) => setState(() => _college = v),
+                    ),
+                    _dropdown(
+                      label: 'Year',
+                      value: _years.contains(_year) ? _year : null,
+                      items: _years,
+                      itemLabel: (y) => 'Year $y',
+                      onChanged: (v) => setState(() => _year = v),
+                    ),
+                  ] else ...[
+                    _readonly('College', user?.college ?? '—'),
+                    _readonly(
+                      'Year',
+                      user?.year != null && user!.year!.isNotEmpty
+                          ? 'Year ${user.year}'
+                          : '—',
+                    ),
+                  ],
+                  _field('Department', _dept, enabled: _editing),
+                  _field('Phone', _phone, enabled: _editing),
+                  if (_editing)
+                    CyanButton(
+                      label: 'Save changes',
+                      loading: _saving,
+                      onPressed: _save,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            DashCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Change password',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontBold,
+                      fontSize: 14,
+                      color: AppColors.dashText,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Use your current password, then choose a new one.',
+                    style: TextStyle(fontSize: 12, color: AppColors.dashMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  _passwordField(
+                    'Current password',
+                    _currentPassword,
+                    obscure: _obscureCurrent,
+                    onToggle: () =>
+                        setState(() => _obscureCurrent = !_obscureCurrent),
+                  ),
+                  _passwordField(
+                    'New password',
+                    _newPassword,
+                    obscure: _obscureNew,
+                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                  ),
+                  _passwordField(
+                    'Confirm new password',
+                    _confirmPassword,
+                    obscure: _obscureConfirm,
+                    onToggle: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
+                  ),
+                  CyanButton(
+                    label: 'Update password',
+                    loading: _changingPassword,
+                    onPressed: _changePassword,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            DashCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Display & sensors',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontBold,
+                      fontSize: 14,
+                      color: AppColors.dashText,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Auto brightness uses the ambient light sensor.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.dashMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Builder(
+                    builder: (context) {
+                      final auto = ref.watch(autoBrightnessProvider);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Material(
+                            color: Colors.transparent,
+                            child: SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'Auto brightness',
+                                style: TextStyle(
+                                  color: AppColors.dashText,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: Text(
+                                auto.enabled
+                                    ? 'Light: ${auto.lux ?? '—'} lux · Brightness ${(auto.brightness * 100).round()}%'
+                                    : 'Off — uses system brightness',
+                                style: const TextStyle(
+                                  color: AppColors.dashMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              value: auto.enabled,
+                              activeThumbColor: Colors.black,
+                              activeTrackColor: AppColors.dashAccent,
+                              onChanged: (v) {
+                                ref
+                                    .read(autoBrightnessProvider.notifier)
+                                    .setEnabled(v);
+                              },
+                            ),
+                          ),
+                          if (auto.error != null)
+                            Text(
+                              auto.error!,
+                              style: const TextStyle(
+                                color: AppColors.mRed,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            DashCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Security',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontBold,
+                      fontSize: 14,
+                      color: AppColors.dashText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Login alerts',
+                        style: TextStyle(
+                          color: AppColors.dashText,
+                          fontSize: 14,
+                        ),
+                      ),
+                      value: _loginAlerts,
+                      activeThumbColor: Colors.black,
+                      activeTrackColor: AppColors.dashAccent,
+                      onChanged: (v) async {
+                        setState(() => _loginAlerts = v);
+                        try {
+                          await ref
+                              .read(uniApiProvider)
+                              .updateSecuritySettings(loginAlertsEnabled: v);
+                        } catch (_) {}
+                      },
+                    ),
+                  ),
+                  if (_loadingSecurity)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: DashLoading(),
+                    )
+                  else ...[
+                    Text(
+                      'Active sessions: ${_sessions.length}',
+                      style: const TextStyle(
+                        color: AppColors.dashMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Recent logins: ${_history.take(3).length}',
+                      style: const TextStyle(
+                        color: AppColors.dashMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () async {
+                        try {
+                          await ref.read(uniApiProvider).logoutAll();
+                          final email = user?.email;
+                          if (email != null) {
+                            await ref
+                                .read(authViewModelProvider.notifier)
+                                .logout(email);
+                          }
+                          if (context.mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/login',
+                              (_) => false,
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceFirst('Exception: ', ''),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.mRed,
+                        side: const BorderSide(color: AppColors.mRed),
+                      ),
+                      child: const Text('Logout all devices'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final email = user?.email;
+                  if (email == null) return;
+                  await ref.read(authViewModelProvider.notifier).logout(email);
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (_) => false,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Logout'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.mRed,
+                  side: const BorderSide(color: AppColors.mRed),
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _ProfileAvatar extends StatelessWidget {
-  final Uint8List? imageBytes;
-
-  const _ProfileAvatar({required this.imageBytes});
-
-  @override
-  Widget build(BuildContext context) {
-    final imageProvider =
-        imageBytes != null ? MemoryImage(imageBytes!) as ImageProvider : null;
-
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6A5AE0), Color(0xFF9188FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  InputDecoration _inputDeco(String label) => InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.dashMuted),
+        filled: true,
+        fillColor: AppColors.surfaceElevatedDark,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dashBorder),
         ),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 2),
-        image: imageProvider != null
-            ? DecorationImage(image: imageProvider, fit: BoxFit.cover)
-            : null,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dashBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dashAccent),
+        ),
+      );
+
+  Widget _field(
+    String label,
+    TextEditingController c, {
+    required bool enabled,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: c,
+        enabled: enabled,
+        style: const TextStyle(color: AppColors.dashText, fontSize: 14),
+        decoration: _inputDeco(label),
       ),
-      child: imageProvider == null
-          ? const Icon(
-              Icons.person_rounded,
-              size: 52,
-              color: Colors.white,
+    );
+  }
+
+  Widget _passwordField(
+    String label,
+    TextEditingController c, {
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: c,
+        obscureText: obscure,
+        style: const TextStyle(color: AppColors.dashText, fontSize: 14),
+        decoration: _inputDeco(label).copyWith(
+          suffixIcon: IconButton(
+            onPressed: onToggle,
+            icon: Icon(
+              obscure
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              color: AppColors.dashMuted,
+              size: 20,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    String Function(String)? itemLabel,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<String>(
+        key: ValueKey('$label-$value-$_editing'),
+        isExpanded: true,
+        initialValue: value != null && items.contains(value) ? value : null,
+        decoration: _inputDeco(label),
+        dropdownColor: AppColors.dashCard,
+        iconEnabledColor: AppColors.dashMuted,
+        selectedItemBuilder: (context) => items
+            .map(
+              (c) => Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  itemLabel?.call(c) ?? c,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.dashText,
+                  ),
+                ),
+              ),
             )
-          : null,
+            .toList(),
+        items: items
+            .map(
+              (c) => DropdownMenuItem(
+                value: c,
+                child: Text(
+                  itemLabel?.call(c) ?? c,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.dashText,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _readonly(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InputDecorator(
+        decoration: _inputDeco(label),
+        child: Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppColors.dashText, fontSize: 14),
+        ),
+      ),
     );
   }
 }
