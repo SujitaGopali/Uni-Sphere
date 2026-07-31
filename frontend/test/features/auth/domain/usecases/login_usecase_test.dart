@@ -19,19 +19,21 @@ void main() {
   const tEmail = 'test@example.com';
   const tPassword = 'password123';
   const tAuthEntity = AuthEntity(
-    name: 'Test User',
+    firstName: 'Test',
+    lastName: 'User',
     email: tEmail,
     password: '',
-    phone: '',
-    address: '',
+    phoneNumber: '',
+    college: '',
   );
 
   test('should return AuthEntity when login is successful', () async {
     when(mockAuthRepository.login(any, any))
         .thenAnswer((_) async => const Right(tAuthEntity));
-    
-    final result = await usecase(const LoginParams(email: tEmail, password: tPassword));
-    
+
+    final result =
+        await usecase(const LoginParams(email: tEmail, password: tPassword));
+
     expect(result, const Right(tAuthEntity));
     verify(mockAuthRepository.login(tEmail, tPassword));
     verifyNoMoreInteractions(mockAuthRepository);
@@ -41,9 +43,10 @@ void main() {
     const tFailure = ApiFailure('Invalid credentials', statusCode: 401);
     when(mockAuthRepository.login(any, any))
         .thenAnswer((_) async => const Left(tFailure));
-    
-    final result = await usecase(const LoginParams(email: tEmail, password: tPassword));
-    
+
+    final result =
+        await usecase(const LoginParams(email: tEmail, password: tPassword));
+
     expect(result, const Left(tFailure));
     verify(mockAuthRepository.login(tEmail, tPassword));
     verifyNoMoreInteractions(mockAuthRepository);
